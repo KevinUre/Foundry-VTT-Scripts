@@ -1,24 +1,12 @@
-const parseModifier = (html) => {
-  let modifier = html.find('[name="modifier"]').val();
-  let modString = ``;
-  if(modifier && modifier !== '' ) { 
-    if(modifier[0] === '-') {
-      modString = modifier;
-    } else if (modifier[0] === '+') {
-      modString = modifier;
-    } else {
-      modString = `+${modifier}`; 
-    }
-  }
-  return modString;
-}
+await game.macros.getName("CommonMacroLibrary").execute();
+const lib = window.commonLibrary;
 
 const dialog = new Dialog({
   title: "Skill Check",
   content: `<form class="flexcol">
             <div class="form-group">
               <label for="modifier">Modifier</label>
-              <input type="text" name="modifier" />
+              <input type="text" name="modifier" placeholder="-2, +3, +1d4" />
             </div>
             </form>`,
   buttons: {
@@ -26,7 +14,7 @@ const dialog = new Dialog({
       label: "Disadvantage",
       callback: async (html) => {
         let rollString = `min(1d20,1d20)`;
-        rollString += parseModifier(html);
+        rollString += lib.parseModifier(html);
         await new Roll(rollString).toMessage();
       }
     },
@@ -34,7 +22,7 @@ const dialog = new Dialog({
       label: "Normal",
       callback: async (html) => {
         let rollString = `1d20`;
-        rollString += parseModifier(html);
+        rollString += lib.parseModifier(html);
         await new Roll(rollString).toMessage();
       }
     },
@@ -42,7 +30,7 @@ const dialog = new Dialog({
       label: "Advantage",
       callback: async (html) => {
         let rollString = `max(1d20,1d20)`;
-        rollString += parseModifier(html);
+        rollString += lib.parseModifier(html);
         await new Roll(rollString).toMessage();
       }
     }

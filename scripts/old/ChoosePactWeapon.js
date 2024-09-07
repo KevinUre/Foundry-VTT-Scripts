@@ -13,28 +13,17 @@ const damageDialog = new Dialog({
                 <option value="Flail">Flail (Bludgeoning)</option>
               </select>
             </div>
-            <div class="form-group">
-              <label for="modMagic">Magic Weapon Properties</label>
-              <select name="modMagic">
-                <option value="Frostburn">Frostburn</option>
-                <option value="Basic">Basic</option>
-              </select>
-            </div>
             </form>`,
   buttons: {
     ok: {
       label: "Set Weapon Type",
       callback: async (html) => {
         let modShape = html.find("[name=modShape")[0].value;
-        let modMagic = html.find("[name=modMagic")[0].value;
         let pactWeapon = {
           name: 'Short Sword',
           damageNumerator: '1',
           damageDenominator: '6',
-          damageType: 'Slashing',
-          toHitBonus: 1,
-          damageBonus: 1,
-          extraDamages: []
+          damageType: 'Slashing'
         }
         switch (String(modShape)) {
           case 'Greatsword':
@@ -78,15 +67,6 @@ const damageDialog = new Dialog({
             pactWeapon.damageNumerator = '1';
             pactWeapon.damageDenominator = '8';
             pactWeapon.damageType = 'Bludgeoning';
-            break;
-        }
-        switch (String(modMagic)) {
-          case 'Basic':
-            break;
-          case 'Frostburn':
-            pactWeapon.name += " (Frostburn)"
-            pactWeapon.extraDamages.push('1d6[Cold]');
-            pactWeapon.extraDamages.push({"Target is Undead": '2d6[Physical]'});
             break;
         }
         let currentUser = game.user;
