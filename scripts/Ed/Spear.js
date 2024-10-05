@@ -154,7 +154,7 @@ const damageDialog = new Dialog({
         if(crit) {
           weaponDamage = weaponDamage.replace(`${diceFromWeapon}d`,`${2*diceFromWeapon}d`);
         }  
-        let rollString = `${weaponDamage}[${damageType}]+${game.user.character.system.abilities.str.mod}${mod}`;
+        let rollString = `${weaponDamage}[${damageType}]+${game.user.character.system.abilities.str.mod}[${damageType}]${mod}`;
         if(modShouldSmite) {
           let smiteDice = `${parseInt(modSmiteLevel)+1}d8`
           if(modUndead) {
