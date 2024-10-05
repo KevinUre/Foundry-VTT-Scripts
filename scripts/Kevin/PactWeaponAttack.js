@@ -12,7 +12,6 @@ let cachedFormFields = await game.user.getFlag('world', 'CachedFormFields');
 if (!cachedFormFields) {
   cachedFormFields = {}
 }
-console.log(JSON.stringify(cachedFormFields))
 
 const cacheToHitFields = async (html) => {
   await game.user.setFlag('world', 'CachedFormFields', {'ToHit.Modifier': html.find('[name="modifier"]').val()});
@@ -37,7 +36,7 @@ const cacheDamageFields = async (html) => {
 const assembleRollString = (base, html) => {
   let rollString = base;
   rollString += lib.parseModifier(html);
-  rollString += `+ ${toHitBonus} + ${game.user.character.system.abilities.cha.mod}+ ${game.user.character.system.attributes.prof}`;
+  rollString += `+ ${toHitBonus} + ${game.user.character.system.abilities.cha.mod} + ${game.user.character.system.attributes.prof}`;
   return rollString;
 }
 
@@ -129,8 +128,6 @@ pactWeapon.extraDamages.forEach(element => {
   }
 });
 
-console.log(extraDamageMixIn)
-
 const damageDialog = new Dialog({
   title: "Pact Weapon: Damage Roll",
   content: `<form class="flexcol">
@@ -154,9 +151,9 @@ const damageDialog = new Dialog({
         await cacheDamageFields(html);
         let modHex = html.find("[name=modHex")[0].checked;
         let mod = lib.parseModifier(html);
-        let damageDice = pactWeapon.damageNumerator;
-        let rollString = `${damageDice}d${pactWeapon.damageDenominator}[${pactWeapon.damageType}]+${damageBonus}+${game.user.character.system.abilities.cha.mod}${mod}`;
-        if (cursed) { rollString += `+${game.user.character.system.attributes.prof}`}
+        let rollString = `${pactWeapon.damageNumerator}d${pactWeapon.damageDenominator}[${pactWeapon.damageType}]`;
+        rollString += `+${damageBonus}[${pactWeapon.damageType}]+${game.user.character.system.abilities.cha.mod}[${pactWeapon.damageType}]${mod}`;
+        if (cursed) { rollString += `+${game.user.character.system.attributes.prof}[${pactWeapon.damageType}]`}
         pactWeapon.extraDamages.forEach(element => {
           if(typeof element === 'object') {
             let name = Object.keys(element)[0];
@@ -174,7 +171,7 @@ const damageDialog = new Dialog({
         if(modHex) {
             rollString += `+1d6[Necrotic]`;
         }
-        await new Roll(rollString).toMessage({flavor: "Damage Roll"});
+        await new CONFIG.Dice.DamageRoll(rollString).toMessage({flavor: `${pactWeapon.name} Damage Roll`});
       }
     }
   }

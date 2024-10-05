@@ -30,7 +30,6 @@ window.commonLibrary = {
   },
 
   extractRollValue: (roll) => {
-    console.log(JSON.stringify(roll))
     if (roll.terms[0].fn) {
       return roll.terms[0].result;
     } else {
@@ -70,5 +69,26 @@ window.commonLibrary = {
       }
     }
     return crit;
+  },
+
+  skillCodes: {
+    Acrobatics: 'acr',
+    'Animal Handling': 'ani',
+    Arcana: 'arc',
+    Athletics: 'ath',
+    Deception: 'dec',
+    History: 'his',
+    Insight: 'ins',
+    Intimidation: 'itm',
+    Investigation: 'inv',
+    Medicine: 'med',
+    Nature: 'nat',
+    Perception: 'prc',
+    Performance: 'prf',
+    Persuasion: 'per',
+    Religion: 'rel',
+    'Slight of Hand': 'slt',
+    Stealth: 'ste',
+    Survival: 'sur',
   },
 }

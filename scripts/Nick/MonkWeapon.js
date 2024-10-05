@@ -1,8 +1,5 @@
-let toHitBonus = 0;
-let damageBonus = 0;
-let agonizing = false;
+let profBonus = 2;
 let crit = false;
-let cursed = false;
 
 await game.macros.getName("CommonMacroLibrary").execute();
 const lib = window.commonLibrary;
@@ -14,31 +11,27 @@ if (!cachedFormFields) {
 
 const cacheToHitFields = async (html) => {
   await game.user.setFlag('world', 'CachedFormFields', {'ToHit.Modifier': html.find('[name="modifier"]').val()});
-  await game.user.setFlag('world', 'CachedFormFields', {'ToHit.Cursed': html.find("[name=modCurse")[0].checked});
 }
 
 const cacheDamageFields = async (html) => {
   await game.user.setFlag('world', 'CachedFormFields', {'Damage.Modifier': html.find('[name="modifier"]').val()});
-  await game.user.setFlag('world', 'CachedFormFields', {'Damage.Hexed': html.find("[name=modHex")[0].checked});
+  await game.user.setFlag('world', 'CachedFormFields', {'Damage.Martial': html.find('[name="martial"]').val()});
 }
 
 const assembleRollString = (base, html) => {
   let rollString = base;
   rollString += lib.parseModifier(html);
-  rollString += `+ ${toHitBonus} + ${game.user.character.system.abilities.cha.mod}+ ${game.user.character.system.attributes.prof}`;
+  rollString += ` + ${game.user.character.system.abilities.dex.mod} + ${profBonus}`;
+  console.log(rollString);
   return rollString;
 }
 
 const toHitDialog = new Dialog({
-  title: "Eldritch Blast: To Hit Roll",
+  title: "Monk Weapon: To Hit Roll",
   content: `<form class="flexcol">
             <div class="form-group">
               <label for="modifier">Incidental Modifier</label>
               <input type="text" name="modifier" placeholder="-2, +3, +1d4" value="${cachedFormFields.ToHit && cachedFormFields.ToHit.Modifier ? cachedFormFields.ToHit.Modifier : ""}" />
-            </div>
-            <div class="form-group">
-              <label for="modCurse">Target is Cursed</label>
-              <input name="modCurse" type="checkbox" ${cachedFormFields.ToHit && cachedFormFields.ToHit.Cursed ? "checked" : ""} />
             </div>
             </form>`,
   buttons: {
@@ -46,10 +39,8 @@ const toHitDialog = new Dialog({
       label: "Disadvantage",
       callback: async (html) => {
         await cacheToHitFields(html);
-        cursed = html.find("[name=modCurse")[0].checked;
         crit = await lib.rollWrapper(
-          assembleRollString('min(1d20,1d20)', html),
-          (roll) => lib.extractRollValue(roll) == 19 && cursed
+          assembleRollString('min(1d20,1d20)', html)
         );
         inputDialog.render(true);
       }
@@ -58,10 +49,8 @@ const toHitDialog = new Dialog({
       label: "Normal",
       callback: async (html) => {
         await cacheToHitFields(html);
-        cursed = html.find("[name=modCurse")[0].checked;
         crit = await lib.rollWrapper(
-          assembleRollString('1d20', html),
-          (roll) => lib.extractRollValue(roll) == 19 && cursed
+          assembleRollString('1d20', html)
         );
         inputDialog.render(true);
       }
@@ -70,10 +59,8 @@ const toHitDialog = new Dialog({
       label: "Advantage",
       callback: async (html) => {
         await cacheToHitFields(html);
-        cursed = html.find("[name=modCurse")[0].checked;
         crit = await lib.rollWrapper(
-          assembleRollString('max(1d20,1d20)', html),
-          (roll) => lib.extractRollValue(roll) == 19 && cursed
+          assembleRollString('max(1d20,1d20)', html)
         );
         inputDialog.render(true);
       }
@@ -99,15 +86,15 @@ const inputDialog = new Dialog({
 });
 
 const damageDialog = new Dialog({
-  title: "Eldritch Blast: Damage Roll",
+  title: "Monk Weapon: Damage Roll",
   content: `<form class="flexcol">
+            <div class="form-group">
+              <label for="martial">Martial Dice Size</label>
+              <input type="text" name="martial" placeholder="4, 6, 8" value="${cachedFormFields.Damage && cachedFormFields.Damage.Martial ? cachedFormFields.Damage.Martial : "6"}" />
+            </div>
             <div class="form-group">
               <label for="modifier">Incidental Modifier</label>
               <input type="text" name="modifier" placeholder="-2, +3, +1d4" value="${cachedFormFields.Damage && cachedFormFields.Damage.Modifier ? cachedFormFields.Damage.Modifier : ""}" />
-            </div>
-            <div class="form-group">
-              <label for="modHex">Target is Hexed</label>
-              <input name="modHex" type="checkbox" ${cachedFormFields.Damage && cachedFormFields.Damage.Hexed ? "checked" : ""} />
             </div>
             </form>`,
   buttons: {
@@ -115,22 +102,14 @@ const damageDialog = new Dialog({
       label: "Roll",
       callback: async (html) => {
         await cacheDamageFields(html);
-        let modHex = html.find("[name=modHex")[0].checked;
         let mod = lib.parseModifier(html);
+        let martial = html.find('[name="martial"]').val();
         let damageDice = 1;
         if(crit) {
           damageDice = 2 * damageDice;
-          // mod = mod.replace(/\d+(?=d\d)/g, (match) => parseInt(match)*2);
         }        
-        let rollString = `${damageDice}d10[Force]+${damageBonus}${agonizing ? `+${game.user.character.system.abilities.cha.mod}` : ''}${cursed ? '+2' : ''}${mod}`;
-        if(modHex) {
-          // if(crit) {
-          //   rollString += `+2d6[Necrotic]`;
-          // } else {
-            rollString += `+1d6[Necrotic]`;
-          // }
-        }
-        await new CONFIG.Dice.DamageRoll(rollString).toMessage({flavor: "Damage Roll"});
+        let rollString = `${damageDice}d${martial}[Bludgeoning]+${game.user.character.system.abilities.dex.mod}${mod}`;
+        await new Roll(rollString).toMessage({flavor: "Damage Roll"});
       }
     }
   }

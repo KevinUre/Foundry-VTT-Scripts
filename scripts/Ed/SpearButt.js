@@ -1,5 +1,3 @@
-let toHitBonus = 5;
-let damageBonus = 3;
 let weaponDamage = '1d4';
 let damageType = 'Bludgeoning';
 
@@ -7,52 +5,65 @@ let damageType = 'Bludgeoning';
 
 let crit = false;
 
-const rollWrapper = async (rollMsg) => {
-  let roll = new Roll(`${rollMsg} + ${toHitBonus}`);
-  await roll.evaluate();
-  await roll.toMessage({flavor: "Roll to Hit"});
-  if(roll.total - toHitBonus == 20) { crit = true; critical(); }
-  if(roll.total - toHitBonus == 1) {
-    let confirmRoll = new Roll('1d20');
-    await confirmRoll.evaluate();
-    await confirmRoll.toMessage({flavor: "Crit Fail Confirm Roll"});
-    if(confirmRoll.total == 1) {
-      ChatMessage.create({
-        user: game.user._id,
-        speaker: ChatMessage.getSpeaker(),
-        content: `Crit Failure confirmed: ${confirmRoll.total}`
-      }, {});
-    } else {
-      ChatMessage.create({
-        user: game.user._id,
-        speaker: ChatMessage.getSpeaker(),
-        content: `Not a crit fail: ${confirmRoll.total}`
-      }, {});
-    }
-  }
-};
+await game.macros.getName("CommonMacroLibrary").execute();
+const lib = window.commonLibrary;
 
-const toHitDialogNew = new Dialog({
-  title: "To Hit Roll",
+let cachedFormFields = await game.user.getFlag('world', 'CachedFormFields');
+if (!cachedFormFields) {
+  cachedFormFields = {}
+}
+
+const cacheToHitFields = async (html) => {
+  await game.user.setFlag('world', 'CachedFormFields', {'ToHit.Modifier': html.find('[name="modifier"]').val()});
+}
+
+const cacheDamageFields = async (html) => {
+  await game.user.setFlag('world', 'CachedFormFields', {'Damage.Modifier': html.find('[name="modifier"]').val()});
+}
+
+const assembleRollString = (base, html) => {
+  let rollString = base;
+  rollString += lib.parseModifier(html);
+  rollString += ` + ${game.user.character.system.abilities.str.mod} + ${game.user.character.system.attributes.prof}`;
+  return rollString;
+}
+
+const toHitDialog = new Dialog({
+  title: "Spear: To Hit Roll",
+  content: `<form class="flexcol">
+            <div class="form-group">
+              <label for="modifier">Incidental Modifier</label>
+              <input type="text" name="modifier" placeholder="-2, +3, +1d4" value="${cachedFormFields.ToHit && cachedFormFields.ToHit.Modifier ? cachedFormFields.ToHit.Modifier : ""}" />
+            </div>
+            </form>`,
   buttons: {
     dis: {
       label: "Disadvantage",
       callback: async (html) => {
-        await rollWrapper('min(1d20,1d20)');
+        await cacheToHitFields(html);
+        crit = await lib.rollWrapper(
+          assembleRollString('min(1d20,1d20)', html)
+        );
         inputDialog.render(true);
       }
     },
     normal: {
       label: "Normal",
       callback: async (html) => {
-        await rollWrapper('1d20');
+        await cacheToHitFields(html);
+        crit = await lib.rollWrapper(
+          assembleRollString('1d20', html)
+        );
         inputDialog.render(true);
       }
     },
     adv: {
       label: "Advantage",
       callback: async (html) => {
-        await rollWrapper('max(1d20,1d20)');
+        await cacheToHitFields(html);
+        crit = await lib.rollWrapper(
+          assembleRollString('max(1d20,1d20)', html)
+        );
         inputDialog.render(true);
       }
     }
@@ -76,57 +87,87 @@ const inputDialog = new Dialog({
   }
 });
 
+console.log(JSON.stringify(game.user.character.system.spells));
+
+smiteMixIn = ``;
+// let smiteInit = false;
+let smiteCapable = false;
+[1,2,3,4,5].forEach((slotLevel) => {
+  if(game.user.character.system.spells[`spell${slotLevel}`].value > 0) {
+    // if(!smiteInit) {
+    //   smiteInit = true;
+    //   smiteMixIn += `<div class="form-group">
+    //                   <label for="modSmite">Divine Smite?</label>
+    //                   <input name="modSmite" type="checkbox" />
+    //                 </div>
+    //                 <div class="form-group">
+    //                   <label for="modSlot">Slot Level for Smite</label>
+    //                   <select name="modSlot">\n`;
+    // }
+    smiteCapable = true;
+    smiteMixIn += `<option value="${slotLevel}">${slotLevel}${((n)=>{return["st","nd","rd"][((n+90)%100-10)%10-1]||"th"})(slotLevel)} Level</option>\n`;
+  } else if(game.user.character.system.spells[`spell${slotLevel}`].max > 0) {
+    smiteMixIn += `<option value="${slotLevel}" disabled>${slotLevel}${((n)=>{return["st","nd","rd"][((n+90)%100-10)%10-1]||"th"})(slotLevel)} Level</option>\n`;
+  }
+});
+// if(smiteInit) {
+//   smiteMixIn += `</select>
+//                 </div>
+//                 <div class="form-group">
+//                   <label for="modUndead">Smite target is Undead?</label>
+//                   <input name="modUndead" type="checkbox" />
+//                 </div>\n`;
+// }
+
 const damageDialog = new Dialog({
-  title: "Damage Roll",
+  title: "Spear: Damage Roll",
   content: `<form class="flexcol">
             <div class="form-group">
+              <label for="modifier">Incidental Modifier</label>
+              <input type="text" name="modifier" placeholder="-2, +3, +1d4" value="${cachedFormFields.Damage && cachedFormFields.Damage.Modifier ? cachedFormFields.Damage.Modifier : ""}" />
+            </div>
+            <div class="form-group">
               <label for="modSmite">Divine Smite?</label>
-              <input name="modSmite" type="checkbox" />
+              <input name="modSmite" type="checkbox" ${smiteCapable ? "" : "disabled"} />
             </div>
             <div class="form-group">
               <label for="modSlot">Slot Level for Smite</label>
               <select name="modSlot">
-                <option value="2d8">1st Level</option>
-                <option value="3d8">2nd Level</option>
-                <option value="4d8">3rd Level</option>
-                <option value="5d8">4th Level</option>
-                <option value="6d8">5th Level</option>
+                ${smiteMixIn}
               </select>
             </div>
             <div class="form-group">
-              <label for="modUndead">Smite target is Undead?/label>
-              <input name="modUndead" type="checkbox" />
+              <label for="modUndead">Smite target is Undead?</label>
+              <input name="modUndead" type="checkbox" ${smiteCapable ? "" : "disabled"} />
             </div>
             </form>`,
   buttons: {
     ok: {
       label: "Roll",
       callback: async (html) => {
+        await cacheDamageFields(html);
         let modShouldSmite = html.find("[name=modSmite")[0].checked;
         let modSmiteLevel = html.find("[name=modSlot")[0].value;
         let modUndead = html.find("[name=modUndead")[0].checked;
+        let mod = lib.parseModifier(html);
         let diceFromWeapon = /(\d+?)d/.exec(weaponDamage)[1];
         if(crit) {
           weaponDamage = weaponDamage.replace(`${diceFromWeapon}d`,`${2*diceFromWeapon}d`);
-        }
-        let rollString = `${weaponDamage}[${damageType}]+${damageBonus}`;
+        }  
+        let rollString = `${weaponDamage}[${damageType}]+${game.user.character.system.abilities.str.mod}${mod}`;
         if(modShouldSmite) {
+          let smiteDice = `${parseInt(modSmiteLevel)+1}d8`
           if(modUndead) {
-            let diceFromSmite = /(\d+?)d/.exec(modSmiteLevel)[1];
-            modSmiteLevel = modSmiteLevel.replace(`${diceFromSmite}d`,`${diceFromSmite+1}d`);
+            let diceFromSmite = parseInt(/(\d+?)d/.exec(smiteDice)[1]);
+            smiteDice = smiteDice.replace(`${diceFromSmite}d`,`${diceFromSmite+1}d`);
           }
-          if(crit) {
-            let diceFromSmite = /(\d+?)d/.exec(modSmiteLevel)[1];
-            modSmiteLevel = modSmiteLevel.replace(`${diceFromSmite}d`,`${2*diceFromSmite}d`);
-          }
+          rollString += `+${smiteDice}[Radiant]`;
+          game.user.character.update({[`system.spells.spell${modSmiteLevel}.value`]: game.user.character.system.spells[`spell${modSmiteLevel}`].value-1});
         }
-        rollString += `+${modSmiteLevel}[Radiant]`
-        await new Roll(rollString).toMessage({flavor: 'Roll for Damage'});
+        await new CONFIG.Dice.DamageRoll(rollString).toMessage({flavor: "Damage Roll"});
       }
     }
   }
 });
 
-toHitDialogNew.render(true);
-
-
+toHitDialog.render(true);
