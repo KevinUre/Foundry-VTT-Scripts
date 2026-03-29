@@ -139,6 +139,14 @@ const damageDialog = new Dialog({
               <input type="text" name="modifier" placeholder="-2, +3, +1d4" value="${cachedFormFields.Damage && cachedFormFields.Damage.Modifier ? cachedFormFields.Damage.Modifier : ""}" />
             </div>
             <div class="form-group">
+              <label for="modMagic">Cantrip?</label>
+              <select name="modMagic">
+                <option value="None">None</option>
+                <option value="Booming Blade">Booming Blade</option>
+                <option value="Green-Flame Blade">Green-Flame Blade</option>
+              </select>
+            </div>
+            <div class="form-group">
               <label for="modHex">Target is Hexed</label>
               <input name="modHex" type="checkbox" ${cachedFormFields.Damage && cachedFormFields.Damage.Hexed ? "checked" : ""} />
             </div>
@@ -151,6 +159,7 @@ const damageDialog = new Dialog({
         await cacheDamageFields(html);
         let modHex = html.find("[name=modHex")[0].checked;
         let mod = lib.parseModifier(html);
+        let modMagic = html.find("[name=modMagic")[0].value;
         let rollString = `${pactWeapon.damageNumerator}d${pactWeapon.damageDenominator}[${pactWeapon.damageType}]`;
         rollString += `+${damageBonus}[${pactWeapon.damageType}]+${game.user.character.system.abilities.cha.mod}[${pactWeapon.damageType}]${mod}`;
         if (cursed) { rollString += `+${game.user.character.system.attributes.prof}[${pactWeapon.damageType}]`}
@@ -171,7 +180,21 @@ const damageDialog = new Dialog({
         if(modHex) {
             rollString += `+1d6[Necrotic]`;
         }
-        await new CONFIG.Dice.DamageRoll(rollString).toMessage({flavor: `${pactWeapon.name} Damage Roll`});
+        let secondRollString = undefined
+        if (modMagic !== "None") {
+          await game.user.character.items.find( i => i.name === modMagic && i.type === "spell").displayCard();
+          switch (modMagic) {
+            case 'Booming Blade':
+              rollString += `+1d8[Thunder]`;
+              break;
+            case 'Green-Flame Blade':
+              rollString += `+1d8[Fire]`;
+              secondRollString = `1d8[Fire] + ${game.user.character.system.abilities.cha.mod}[Fire]`;
+              break;
+          }
+        }
+        await new CONFIG.Dice.DamageRoll(rollString, undefined, { properties: ['mgc'] }).toMessage({flavor: `${pactWeapon.name} Damage Roll`});
+        if (secondRollString) { await new CONFIG.Dice.DamageRoll(secondRollString).toMessage({flavor: `Green-Flame Blade 2nd Target Damage Roll`}); }
       }
     }
   }

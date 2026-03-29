@@ -122,7 +122,7 @@ const damageDialog = new Dialog({
           damageDice = 2 * damageDice;
           // mod = mod.replace(/\d+(?=d\d)/g, (match) => parseInt(match)*2);
         }        
-        let rollString = `${damageDice}d10[Force]+${damageBonus}${agonizing ? `+${game.user.character.system.abilities.cha.mod}` : ''}${cursed ? '+2' : ''}${mod}`;
+        let rollString = `${damageDice}d10[Force]+${damageBonus}[Force]${agonizing ? `+${game.user.character.system.abilities.cha.mod}[Force]` : ''}${cursed ? '+2[Force]' : ''}${mod}`;
         if(modHex) {
           // if(crit) {
           //   rollString += `+2d6[Necrotic]`;

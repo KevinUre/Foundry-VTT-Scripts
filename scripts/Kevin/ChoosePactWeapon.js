@@ -11,6 +11,8 @@ const damageDialog = new Dialog({
                 <option value="Longsword">Longsword (Slashing)</option>
                 <option value="Morningstar">Morningstar (Piercing)</option>
                 <option value="Flail">Flail (Bludgeoning)</option>
+                <option value="Longbow">Longbow (Piercing)</option>
+                <option value="Heavy Crossbow">Heavy Crossbow (Piercing)</option>
               </select>
             </div>
             <div class="form-group">
@@ -78,6 +80,18 @@ const damageDialog = new Dialog({
             pactWeapon.damageNumerator = '1';
             pactWeapon.damageDenominator = '8';
             pactWeapon.damageType = 'Bludgeoning';
+            break;
+          case 'Longbow':
+            pactWeapon.name = modShape;
+            pactWeapon.damageNumerator = '1';
+            pactWeapon.damageDenominator = '8';
+            pactWeapon.damageType = 'Piercing';
+            break;
+          case 'Heavy Crossbow':
+            pactWeapon.name = modShape;
+            pactWeapon.damageNumerator = '1';
+            pactWeapon.damageDenominator = '10';
+            pactWeapon.damageType = 'Piercing';
             break;
         }
         switch (String(modMagic)) {
