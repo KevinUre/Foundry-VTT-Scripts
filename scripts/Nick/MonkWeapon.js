@@ -1,4 +1,3 @@
-let profBonus = 2;
 let crit = false;
 
 await game.macros.getName("CommonMacroLibrary").execute();
@@ -16,12 +15,14 @@ const cacheToHitFields = async (html) => {
 const cacheDamageFields = async (html) => {
   await game.user.setFlag('world', 'CachedFormFields', {'Damage.Modifier': html.find('[name="modifier"]').val()});
   await game.user.setFlag('world', 'CachedFormFields', {'Damage.Martial': html.find('[name="martial"]').val()});
+
+  await game.user.setFlag('world', 'CachedFormFields', {'Damage.Type': html.find('[name="modType"]').value});
 }
 
 const assembleRollString = (base, html) => {
   let rollString = base;
   rollString += lib.parseModifier(html);
-  rollString += ` + ${game.user.character.system.abilities.dex.mod} + ${profBonus}`;
+  rollString += ` + ${game.user.character.system.abilities.dex.mod} + ${game.user.character.system.attributes.prof}`;
   console.log(rollString);
   return rollString;
 }
@@ -96,6 +97,16 @@ const damageDialog = new Dialog({
               <label for="modifier">Incidental Modifier</label>
               <input type="text" name="modifier" placeholder="-2, +3, +1d4" value="${cachedFormFields.Damage && cachedFormFields.Damage.Modifier ? cachedFormFields.Damage.Modifier : ""}" />
             </div>
+            <div class="form-group">
+              <label for="modShape">Damage Type</label>
+              <select name="modType">
+                <option value="Bludgeoning" ${cachedFormFields.Damage && cachedFormFields.Damage.Type && cachedFormFields.Damage.Type === "Bludgeoning" ? "selected" : ""}>Bludgeoning</option>
+                <option value="Cold" ${cachedFormFields.Damage && cachedFormFields.Damage.Type && cachedFormFields.Damage.Type === "Cold" ? "selected" : ""}>Cold</option>
+                <option value="Thunder" ${cachedFormFields.Damage && cachedFormFields.Damage.Type && cachedFormFields.Damage.Type === "Thunder" ? "selected" : ""}>Thunder</option>
+                <option value="Lightning" ${cachedFormFields.Damage && cachedFormFields.Damage.Type && cachedFormFields.Damage.Type === "Lightning" ? "selected" : ""}>Lightning</option>
+                <option value="Fire" ${cachedFormFields.Damage && cachedFormFields.Damage.Type && cachedFormFields.Damage.Type === "Fire" ? "selected" : ""}>Fire</option>
+              </select>
+            </div>
             </form>`,
   buttons: {
     ok: {
@@ -104,11 +115,12 @@ const damageDialog = new Dialog({
         await cacheDamageFields(html);
         let mod = lib.parseModifier(html);
         let martial = html.find('[name="martial"]').val();
+        let modDamageType = html.find("[name=modType")[0].value;
         let damageDice = 1;
         if(crit) {
           damageDice = 2 * damageDice;
         }        
-        let rollString = `${damageDice}d${martial}[Bludgeoning]+${game.user.character.system.abilities.dex.mod}${mod}`;
+        let rollString = `${damageDice}d${martial}[${modDamageType}]+${game.user.character.system.abilities.dex.mod}${mod}`;
         await new Roll(rollString).toMessage({flavor: "Damage Roll"});
       }
     }
