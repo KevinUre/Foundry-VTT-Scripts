@@ -164,6 +164,9 @@ const damageDialog = new Dialog({
           rollString += `+${smiteDice}[Radiant]`;
           game.user.character.update({[`system.spells.spell${modSmiteLevel}.value`]: game.user.character.system.spells[`spell${modSmiteLevel}`].value-1});
         }
+        game.user.setFlag('world', 'LastAttack', rollString).catch(err => {
+          ui.notifications.error(`Failed to set flag for Savage Attack: ${err}`)
+        });
         await new CONFIG.Dice.DamageRoll(rollString).toMessage({flavor: "Damage Roll"});
       }
     }
