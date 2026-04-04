@@ -16,7 +16,7 @@ const cacheDamageFields = async (html) => {
   await game.user.setFlag('world', 'CachedFormFields', {'Damage.Modifier': html.find('[name="modifier"]').val()});
   await game.user.setFlag('world', 'CachedFormFields', {'Damage.Martial': html.find('[name="martial"]').val()});
 
-  await game.user.setFlag('world', 'CachedFormFields', {'Damage.Type': html.find('[name="modType"]').value});
+  await game.user.setFlag('world', 'CachedFormFields', {'Damage.MonkType': html.find('[name="modType"]')[0].value});
 }
 
 const assembleRollString = (base, html) => {
@@ -100,11 +100,11 @@ const damageDialog = new Dialog({
             <div class="form-group">
               <label for="modShape">Damage Type</label>
               <select name="modType">
-                <option value="Bludgeoning" ${cachedFormFields.Damage && cachedFormFields.Damage.Type && cachedFormFields.Damage.Type === "Bludgeoning" ? "selected" : ""}>Bludgeoning</option>
-                <option value="Cold" ${cachedFormFields.Damage && cachedFormFields.Damage.Type && cachedFormFields.Damage.Type === "Cold" ? "selected" : ""}>Cold</option>
-                <option value="Thunder" ${cachedFormFields.Damage && cachedFormFields.Damage.Type && cachedFormFields.Damage.Type === "Thunder" ? "selected" : ""}>Thunder</option>
-                <option value="Lightning" ${cachedFormFields.Damage && cachedFormFields.Damage.Type && cachedFormFields.Damage.Type === "Lightning" ? "selected" : ""}>Lightning</option>
-                <option value="Fire" ${cachedFormFields.Damage && cachedFormFields.Damage.Type && cachedFormFields.Damage.Type === "Fire" ? "selected" : ""}>Fire</option>
+                <option value="Bludgeoning" ${cachedFormFields.Damage && cachedFormFields.Damage.MonkType && cachedFormFields.Damage.MonkType === "Bludgeoning" ? "selected" : ""}>Bludgeoning</option>
+                <option value="Cold" ${cachedFormFields.Damage && cachedFormFields.Damage.MonkType && cachedFormFields.Damage.MonkType === "Cold" ? "selected" : ""}>Cold</option>
+                <option value="Thunder" ${cachedFormFields.Damage && cachedFormFields.Damage.MonkType && cachedFormFields.Damage.MonkType === "Thunder" ? "selected" : ""}>Thunder</option>
+                <option value="Lightning" ${cachedFormFields.Damage && cachedFormFields.Damage.MonkType && cachedFormFields.Damage.MonkType === "Lightning" ? "selected" : ""}>Lightning</option>
+                <option value="Fire" ${cachedFormFields.Damage && cachedFormFields.Damage.MonkType && cachedFormFields.Damage.MonkType === "Fire" ? "selected" : ""}>Fire</option>
               </select>
             </div>
             </form>`,
