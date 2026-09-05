@@ -22,6 +22,7 @@ extrasToBeCached = [];
 const cacheDamageFields = async (html) => {
   await game.user.setFlag('world', 'CachedFormFields', {'Damage.Modifier': html.find('[name="modifier"]').val()});
   await game.user.setFlag('world', 'CachedFormFields', {'Damage.Hexed': html.find("[name=modHex")[0].checked});
+  await game.user.setFlag('world', 'CachedFormFields', {'Damage.Type': html.find("[name=modDmgType")[0].checked});
   for (const extra of extrasToBeCached) {
     switch(extra.type) {
       case 'Checkbox':
@@ -138,12 +139,21 @@ const damageDialog = new Dialog({
               <label for="modifier">Incidental Modifier</label>
               <input type="text" name="modifier" placeholder="-2, +3, +1d4" value="${cachedFormFields.Damage && cachedFormFields.Damage.Modifier ? cachedFormFields.Damage.Modifier : ""}" />
             </div>
-            <div class="form-group">
+            <!--<div class="form-group">
               <label for="modMagic">Cantrip?</label>
               <select name="modMagic">
                 <option value="None">None</option>
                 <option value="Booming Blade">Booming Blade</option>
                 <option value="Green-Flame Blade">Green-Flame Blade</option>
+              </select>
+            </div>-->
+            <div class="form-group">
+              <label for="modDmgType">Damage Type</label>
+              <select name="modDmgType">
+                <option value="Physical">${pactWeapon.damageType}</option>
+                <option value="Psychic">Psychic</option>
+                <option value="Necrotic">Necrotic</option>
+                <option value="Radiant">Radiant</option>
               </select>
             </div>
             <div class="form-group">
@@ -159,10 +169,12 @@ const damageDialog = new Dialog({
         await cacheDamageFields(html);
         let modHex = html.find("[name=modHex")[0].checked;
         let mod = lib.parseModifier(html);
-        let modMagic = html.find("[name=modMagic")[0].value;
-        let rollString = `${pactWeapon.damageNumerator}d${pactWeapon.damageDenominator}[${pactWeapon.damageType}]`;
-        rollString += `+${damageBonus}[${pactWeapon.damageType}]+${game.user.character.system.abilities.cha.mod}[${pactWeapon.damageType}]${mod}`;
-        if (cursed) { rollString += `+${game.user.character.system.attributes.prof}[${pactWeapon.damageType}]`}
+        // let modMagic = html.find("[name=modMagic")[0].value;
+        let modDmgType = html.find("[name=modDmgType")[0].value;
+        // ui.notifications.error(`Damage Type: ${modDmgType}`)
+        let rollString = `${pactWeapon.damageNumerator}d${pactWeapon.damageDenominator}[${modDmgType}]`;
+        rollString += `+${damageBonus}[${modDmgType}]+${game.user.character.system.abilities.cha.mod}[${modDmgType}]${mod}`;
+        if (cursed) { rollString += `+${game.user.character.system.attributes.prof}[${modDmgType}]`}
         pactWeapon.extraDamages.forEach(element => {
           if(typeof element === 'object') {
             let name = Object.keys(element)[0];
@@ -173,28 +185,32 @@ const damageDialog = new Dialog({
             rollString += `+${element}`
           }
         });
-        rollString = rollString.replace(/Physical/g, (match) => pactWeapon.damageType);
-        if(crit) {
-          rollString = rollString.replace(/\d+(?=d\d)/g, (match) => parseInt(match)*2);
-        }
+        rollString = rollString.replace(/Physical/g, (match) => `${pactWeapon.damageType}`);
         if(modHex) {
             rollString += `+1d6[Necrotic]`;
         }
-        let secondRollString = undefined
-        if (modMagic !== "None") {
-          await game.user.character.items.find( i => i.name === modMagic && i.type === "spell").displayCard();
-          switch (modMagic) {
-            case 'Booming Blade':
-              rollString += `+1d8[Thunder]`;
-              break;
-            case 'Green-Flame Blade':
-              rollString += `+1d8[Fire]`;
-              secondRollString = `1d8[Fire] + ${game.user.character.system.abilities.cha.mod}[Fire]`;
-              break;
-          }
+        if(crit) {
+          rollString = rollString.replace(/\d+(?=d\d)/g, (match) => parseInt(match)*2);
         }
-        await new CONFIG.Dice.DamageRoll(rollString, undefined, { properties: ['mgc'] }).toMessage({flavor: `${pactWeapon.name} Damage Roll`});
-        if (secondRollString) { await new CONFIG.Dice.DamageRoll(secondRollString).toMessage({flavor: `Green-Flame Blade 2nd Target Damage Roll`}); }
+        let secondRollString = undefined
+        // if (modMagic !== "None") {
+        //   await game.user.character.items.find( i => i.name === modMagic && i.type === "spell").displayCard();
+        //   switch (modMagic) {
+        //     case 'Booming Blade':
+        //       rollString += `+1d8[Thunder]`;
+        //       break;
+        //     case 'Green-Flame Blade':
+        //       rollString += `+1d8[Fire]`;
+        //       secondRollString = `1d8[Fire] + ${game.user.character.system.abilities.cha.mod}[Fire]`;
+        //       break;
+        //   }
+        // }
+        game.user.setFlag('world', 'LastAttack', rollString).catch(err => {
+          ui.notifications.error(`Failed to set flag for Savage Attack: ${err}`)
+        });
+        console.log(rollString)
+        await new CONFIG.Dice.DamageRoll(rollString,{},{properties: ["magical"]}).toMessage({flavor: `${pactWeapon.name} Damage Roll`});
+        //if (secondRollString) { await new CONFIG.Dice.DamageRoll(secondRollString).toMessage({flavor: `Green-Flame Blade 2nd Target Damage Roll`}); }
       }
     }
   }
