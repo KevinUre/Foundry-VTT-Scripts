@@ -19,6 +19,7 @@ const damageDialog = new Dialog({
               <label for="modMagic">Magic Weapon Properties</label>
               <select name="modMagic">
                 <option value="Frostburn">Frostburn</option>
+                <option value="Frostsilver">Frostsilver</option>
                 <option value="Basic">Basic</option>
               </select>
             </div>
@@ -99,8 +100,25 @@ const damageDialog = new Dialog({
             break;
           case 'Frostburn':
             pactWeapon.name += " (Frostburn)"
-            pactWeapon.extraDamages.push('1d6[Cold]');
-            pactWeapon.extraDamages.push({"Target is Undead": '2d6[Physical]'});
+            // pactWeapon.extraDamages.push('1d6[Cold]');
+            pactWeapon.extraDamages.push({
+              amount: '1d6',
+              type: 'Cold',
+            });
+            // pactWeapon.extraDamages.push({"Target is Undead": '2d6[Physical]'});
+            pactWeapon.extraDamages.push({
+              amount: '2d6',
+              type: 'Physical',
+              condition: 'Target is Undead',
+            });
+            break;
+          case 'Frostsilver':
+            pactWeapon.name += " (Frostsilver)"
+            // pactWeapon.extraDamages.push('2d4[Cold]');
+            pactWeapon.extraDamages.push({
+              amount: '2d4',
+              type: 'Cold',
+            });
             break;
         }
         let currentUser = game.user;

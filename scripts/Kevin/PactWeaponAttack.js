@@ -115,8 +115,20 @@ const inputDialog = new Dialog({
 
 extraDamageMixIn = ``;
 pactWeapon.extraDamages.forEach(element => {
-  if(typeof element === 'object') {
-    let name = Object.keys(element)[0];
+  // if(typeof element === 'object') {
+  //   let name = Object.keys(element)[0];
+  //   let newMixIn = `<div class="form-group">
+  //                     <label for="mod${name.replaceAll(' ','')}">${name}</label>
+  //                     <input name="mod${name.replaceAll(' ','')}" type="checkbox" ${cachedFormFields.Damage && cachedFormFields.Damage[name.replaceAll(' ','')] ? "checked" : ""} />
+  //                   </div>\n`;
+  //   extraDamageMixIn += newMixIn;
+  //   extrasToBeCached.push({
+  //     name: name.replaceAll(' ',''),
+  //     type: 'Checkbox'
+  //   })
+  // }
+  if(element.condition) {
+    let name = element.condition;
     let newMixIn = `<div class="form-group">
                       <label for="mod${name.replaceAll(' ','')}">${name}</label>
                       <input name="mod${name.replaceAll(' ','')}" type="checkbox" ${cachedFormFields.Damage && cachedFormFields.Damage[name.replaceAll(' ','')] ? "checked" : ""} />
@@ -172,44 +184,96 @@ const damageDialog = new Dialog({
         // let modMagic = html.find("[name=modMagic")[0].value;
         let modDmgType = html.find("[name=modDmgType")[0].value;
         // ui.notifications.error(`Damage Type: ${modDmgType}`)
-        let rollString = `${pactWeapon.damageNumerator}d${pactWeapon.damageDenominator}[${modDmgType}]`;
-        rollString += `+${damageBonus}[${modDmgType}]+${game.user.character.system.abilities.cha.mod}[${modDmgType}]${mod}`;
-        if (cursed) { rollString += `+${game.user.character.system.attributes.prof}[${modDmgType}]`}
+
+        const damageRolls = [];
+
+        let damageType = ( modDmgType === "Physical" ? pactWeapon.damageType : modDmgType ).toLowerCase()
+        let rollString = `${pactWeapon.damageNumerator}d${pactWeapon.damageDenominator}`
+        rollString += `+${damageBonus}+${game.user.character.system.abilities.cha.mod}${mod}`;
+        if (cursed) { rollString += `+${game.user.character.system.attributes.prof}`}
+        damageRolls.push(new CONFIG.Dice.DamageRoll(rollString, {}, {type: damageType, properties: ["magical"]}));
+
         pactWeapon.extraDamages.forEach(element => {
-          if(typeof element === 'object') {
-            let name = Object.keys(element)[0];
+          rollString = ``
+          if(element.condition) {
+            let name = element.condition;
             let mod = html.find(`[name=mod${name.replaceAll(' ','')}`)[0].checked;
-            if(mod) { rollString += `+${element[name]}` }
+            if(mod) {
+              damageType = ( element.type === "Physical" ? ( modDmgType === "Physical" ? pactWeapon.damageType : modDmgType ) : element.type ).toLowerCase()
+              damageRolls.push(new CONFIG.Dice.DamageRoll(element.amount, {}, {type: damageType, properties: ["magical"]}));
+            }
           }
           else {
-            rollString += `+${element}`
+            damageType = ( element.type === "Physical" ? ( modDmgType === "Physical" ? pactWeapon.damageType : modDmgType ) : element.type ).toLowerCase()
+            damageRolls.push(new CONFIG.Dice.DamageRoll(element.amount, {}, {type: damageType, properties: ["magical"]}));
           }
-        });
-        rollString = rollString.replace(/Physical/g, (match) => `${pactWeapon.damageType}`);
+        })
+
         if(modHex) {
-            rollString += `+1d6[Necrotic]`;
+          damageRolls.push(new CONFIG.Dice.DamageRoll('1d6', {}, {type: 'necrotic', properties: ["magical"]}));
         }
-        if(crit) {
-          rollString = rollString.replace(/\d+(?=d\d)/g, (match) => parseInt(match)*2);
+
+        if (crit) {
+          damageRolls.forEach(roll => {
+            roll.alter(2, 0, { multiplyNumeric: false });
+          });
         }
-        let secondRollString = undefined
-        // if (modMagic !== "None") {
-        //   await game.user.character.items.find( i => i.name === modMagic && i.type === "spell").displayCard();
-        //   switch (modMagic) {
-        //     case 'Booming Blade':
-        //       rollString += `+1d8[Thunder]`;
-        //       break;
-        //     case 'Green-Flame Blade':
-        //       rollString += `+1d8[Fire]`;
-        //       secondRollString = `1d8[Fire] + ${game.user.character.system.abilities.cha.mod}[Fire]`;
-        //       break;
-        //   }
-        // }
-        game.user.setFlag('world', 'LastAttack', rollString).catch(err => {
+
+        const storedDamageRolls = damageRolls.map(roll => ({
+          formula: roll.formula,
+          type: roll.options.type,
+          properties: roll.options.properties ?? []
+        }));
+
+        game.user.setFlag('world', 'LastAttack', storedDamageRolls).catch(err => {
           ui.notifications.error(`Failed to set flag for Savage Attack: ${err}`)
         });
-        console.log(rollString)
-        await new CONFIG.Dice.DamageRoll(rollString,{},{properties: ["magical"]}).toMessage({flavor: `${pactWeapon.name} Damage Roll`});
+
+        await Promise.all(damageRolls.map(r => r.evaluate()));
+        await ChatMessage.create({
+          speaker: ChatMessage.getSpeaker({ actor: game.user.character }),
+          flavor: `${pactWeapon.name} Damage Roll`,
+          rolls: damageRolls
+        });
+
+        // let rollString = `${pactWeapon.damageNumerator}d${pactWeapon.damageDenominator}[${modDmgType}]`;
+        // rollString += `+${damageBonus}[${modDmgType}]+${game.user.character.system.abilities.cha.mod}[${modDmgType}]${mod}`;
+        // if (cursed) { rollString += `+${game.user.character.system.attributes.prof}[${modDmgType}]`}
+        // pactWeapon.extraDamages.forEach(element => {
+        //   if(typeof element === 'object') {
+        //     let name = Object.keys(element)[0];
+        //     let mod = html.find(`[name=mod${name.replaceAll(' ','')}`)[0].checked;
+        //     if(mod) { rollString += `+${element[name]}` }
+        //   }
+        //   else {
+        //     rollString += `+${element}`
+        //   }
+        // });
+        // rollString = rollString.replace(/Physical/g, (match) => `${pactWeapon.damageType}`);
+        // if(modHex) {
+        //     rollString += `+1d6[Necrotic]`;
+        // }
+        // if(crit) {
+        //   rollString = rollString.replace(/\d+(?=d\d)/g, (match) => parseInt(match)*2);
+        // }
+        // let secondRollString = undefined
+        // // if (modMagic !== "None") {
+        // //   await game.user.character.items.find( i => i.name === modMagic && i.type === "spell").displayCard();
+        // //   switch (modMagic) {
+        // //     case 'Booming Blade':
+        // //       rollString += `+1d8[Thunder]`;
+        // //       break;
+        // //     case 'Green-Flame Blade':
+        // //       rollString += `+1d8[Fire]`;
+        // //       secondRollString = `1d8[Fire] + ${game.user.character.system.abilities.cha.mod}[Fire]`;
+        // //       break;
+        // //   }
+        // // }
+        // game.user.setFlag('world', 'LastAttack', rollString).catch(err => {
+        //   ui.notifications.error(`Failed to set flag for Savage Attack: ${err}`)
+        // });
+        // console.log(rollString)
+        // await new CONFIG.Dice.DamageRoll(rollString,{},{properties: ["magical"]}).toMessage({flavor: `${pactWeapon.name} Damage Roll`});
         //if (secondRollString) { await new CONFIG.Dice.DamageRoll(secondRollString).toMessage({flavor: `Green-Flame Blade 2nd Target Damage Roll`}); }
       }
     }
